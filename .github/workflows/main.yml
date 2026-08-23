@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          lfs: true
 
       - name: Install Odin
         uses: laytan/setup-odin@v2
@@ -30,14 +32,14 @@ jobs:
         run: |
           odin build . -out:belt-tastic -o:aggressive
 
-      - name: Package
+      - name: Create ZIP
         run: |
           mkdir belt-tastic-linux-amd64
           cp belt-tastic belt-tastic-linux-amd64/
           cp -r res belt-tastic-linux-amd64/
           zip -r belt-tastic-linux-amd64.zip belt-tastic-linux-amd64
 
-      - name: Upload
+      - name: Upload game
         uses: actions/upload-artifact@v4
         with:
           name: belt-tastic-linux-amd64
@@ -53,6 +55,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          lfs: true
 
       - name: Install Odin
         uses: laytan/setup-odin@v2
@@ -68,14 +72,14 @@ jobs:
         run: |
           odin build . -out:belt-tastic -o:aggressive
 
-      - name: Package
+      - name: Create ZIP
         run: |
           mkdir belt-tastic-linux-arm64
           cp belt-tastic belt-tastic-linux-arm64/
           cp -r res belt-tastic-linux-arm64/
           zip -r belt-tastic-linux-arm64.zip belt-tastic-linux-arm64
 
-      - name: Upload
+      - name: Upload game
         uses: actions/upload-artifact@v4
         with:
           name: belt-tastic-linux-arm64
@@ -91,6 +95,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          lfs: true
 
       - name: Install Odin
         uses: laytan/setup-odin@v2
@@ -101,7 +107,7 @@ jobs:
         run: |
           odin build . -out:belt-tastic.exe -o:aggressive
 
-      - name: Package
+      - name: Create ZIP
         shell: bash
         run: |
           mkdir belt-tastic-windows-amd64
@@ -109,7 +115,7 @@ jobs:
           cp -r res belt-tastic-windows-amd64/
           7z a belt-tastic-windows-amd64.zip belt-tastic-windows-amd64
 
-      - name: Upload
+      - name: Upload game
         uses: actions/upload-artifact@v4
         with:
           name: belt-tastic-windows-amd64
@@ -125,6 +131,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          lfs: true
 
       - name: Install Odin
         uses: laytan/setup-odin@v2
@@ -135,7 +143,7 @@ jobs:
         run: |
           odin build . -out:belt-tastic.exe -o:aggressive
 
-      - name: Package
+      - name: Create ZIP
         shell: bash
         run: |
           mkdir belt-tastic-windows-arm64
@@ -143,7 +151,7 @@ jobs:
           cp -r res belt-tastic-windows-arm64/
           7z a belt-tastic-windows-arm64.zip belt-tastic-windows-arm64
 
-      - name: Upload
+      - name: Upload game
         uses: actions/upload-artifact@v4
         with:
           name: belt-tastic-windows-arm64
@@ -159,6 +167,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          lfs: true
 
       - name: Install Odin
         uses: laytan/setup-odin@v2
@@ -169,7 +179,7 @@ jobs:
         run: |
           odin build . -out:belt-tastic-amd64 -o:aggressive
 
-      - name: Upload build
+      - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
           name: belt-tastic-macos-amd64
@@ -185,6 +195,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          lfs: true
 
       - name: Install Odin
         uses: laytan/setup-odin@v2
@@ -195,7 +207,7 @@ jobs:
         run: |
           odin build . -out:belt-tastic-arm64 -o:aggressive
 
-      - name: Upload build
+      - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
           name: belt-tastic-macos-arm64
@@ -209,40 +221,47 @@ jobs:
     needs:
       - macos-amd64
       - macos-arm64
-  
+
     runs-on: macos-latest
-  
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-  
-      - name: Download AMD64 build
+        with:
+          lfs: true
+
+      - name: Download AMD64 binary
         uses: actions/download-artifact@v5
         with:
           name: belt-tastic-macos-amd64
           path: amd64
-  
-      - name: Download ARM64 build
+
+      - name: Download ARM64 binary
         uses: actions/download-artifact@v5
         with:
           name: belt-tastic-macos-arm64
           path: arm64
-  
+
       - name: Create universal binary
         run: |
           lipo -create \
             amd64/belt-tastic-amd64 \
             arm64/belt-tastic-arm64 \
             -output belt-tastic
-  
-      - name: Package
+
+      - name: Verify universal binary
+        run: |
+          file belt-tastic
+          lipo -info belt-tastic
+
+      - name: Create ZIP
         run: |
           mkdir belt-tastic-macos-universal
           cp belt-tastic belt-tastic-macos-universal/
           cp -r res belt-tastic-macos-universal/
           zip -r belt-tastic-macos-universal.zip belt-tastic-macos-universal
-  
-      - name: Upload
+
+      - name: Upload game
         uses: actions/upload-artifact@v4
         with:
           name: belt-tastic-macos-universal
