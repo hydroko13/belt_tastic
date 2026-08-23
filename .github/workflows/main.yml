@@ -1,0 +1,27 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Odin
+        uses: laytan/setup-odin@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        run: odin build . -out:belt-tastic -o:aggressive
+
+      - name: Upload game
+        uses: actions/upload-artifact@v4
+        with:
+          name: belt-tastic-linux_amd64
+          path: belt-tastic
