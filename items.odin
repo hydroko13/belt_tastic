@@ -25,7 +25,7 @@ load_items :: proc(item_registry: ^[dynamic]Registered_Item) -> bool {
 
 	defer delete(cwd)
 
-	items_dir, join_err := os.join_path({cwd, "items"}, context.allocator)
+	items_dir, join_err := os.join_path({cwd, "res", "items"}, context.allocator)
 
 	if join_err != .None {
 		return false
@@ -74,7 +74,7 @@ load_items :: proc(item_registry: ^[dynamic]Registered_Item) -> bool {
 
 			if is_json { 	// read item json file
 				item_file_path, join_err := os.join_path(
-					{cwd, "items", filename},
+					{cwd, "res", "items", filename},
 					context.allocator,
 				)
 
@@ -86,7 +86,7 @@ load_items :: proc(item_registry: ^[dynamic]Registered_Item) -> bool {
 
 
 				item_image_Path, join_err_img := os.join_path(
-					{cwd, "items", concat_result},
+					{cwd, "res", "items", concat_result},
 					context.allocator,
 				)
 

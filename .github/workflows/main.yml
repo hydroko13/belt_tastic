@@ -21,14 +21,22 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev
+          
 
         
 
       - name: Build
         run: odin build . -out:belt-tastic -o:aggressive
 
+      - name: Create Zip file
+        run: |
+          mkdir belt-tastic-linux-amd64
+          cp belt-tastic belt-tastic-linux-amd64/
+          cp -r res belt-tastic-linux-amd64/
+          zip -r belt-tastic-linux-amd64.zip belt-tastic-linux-amd64
+
       - name: Upload game
         uses: actions/upload-artifact@v4
         with:
           name: belt-tastic-linux_amd64
-          path: belt-tastic
+          path: belt-tastic-linux-amd64.zip

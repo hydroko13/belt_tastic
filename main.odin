@@ -41,7 +41,7 @@ load :: proc(building_registry: ^[dynamic]Registered_Building) -> bool {
 
 	defer delete(cwd)
 
-	buildings_dir, join_err := os.join_path({cwd, "buildings"}, context.allocator)
+	buildings_dir, join_err := os.join_path({cwd, "res", "buildings"}, context.allocator)
 
 	if join_err != .None {
 		return false
@@ -90,7 +90,7 @@ load :: proc(building_registry: ^[dynamic]Registered_Building) -> bool {
 
 			if is_json { 	// read building json file
 				building_file_path, join_err := os.join_path(
-					{cwd, "buildings", filename},
+					{cwd, "res", "buildings", filename},
 					context.allocator,
 				)
 
@@ -102,7 +102,7 @@ load :: proc(building_registry: ^[dynamic]Registered_Building) -> bool {
 
 
 				building_image_Path, join_err_img := os.join_path(
-					{cwd, "buildings", concat_result},
+					{cwd, "res", "buildings", concat_result},
 					context.allocator,
 				)
 
@@ -303,7 +303,7 @@ main :: proc() {
 
 	rl.InitAudioDevice()
 
-	music := rl.LoadMusicStream("IndustrialZone.ogg")
+	music := rl.LoadMusicStream("res/audio/IndustrialZone.ogg")
 
 	rl.SetMusicVolume(music, 4.0)
 
@@ -311,10 +311,10 @@ main :: proc() {
 
 	rl.ToggleFullscreen()
 
-	blipSound := rl.LoadSound("blipSelect.wav")
+	blipSound := rl.LoadSound("res/audio/blipSelect.wav")
 	defer rl.UnloadSound(blipSound)
 
-	blipSound2 := rl.LoadSound("blipSelect2.wav")
+	blipSound2 := rl.LoadSound("res/audio/blipSelect2.wav")
 	defer rl.UnloadSound(blipSound2)
 
 	building_registry := make([dynamic]Registered_Building)
