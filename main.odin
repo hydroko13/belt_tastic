@@ -125,8 +125,9 @@ load :: proc(building_registry: ^[dynamic]Registered_Building) -> bool {
 						new_building.ident = data.ident
 						new_building.spritesheet_width = data.spritesheet_width
 						cstr := strings.clone_to_cstring(building_image_Path)
-						delete(cstr)
+						
 						new_building.spritesheet_texture = rl.LoadTexture(cstr)
+						delete(cstr)
 						delete(building_image_Path)
 
 						new_building.tiles = data.tiles
@@ -305,7 +306,7 @@ main :: proc() {
 
 	music := rl.LoadMusicStream("res/audio/IndustrialZone.ogg")
 
-	rl.SetMusicVolume(music, 4.0)
+	rl.SetMusicVolume(music, 1.0)
 
 	rl.PlayMusicStream(music)
 
@@ -489,7 +490,7 @@ main :: proc() {
 
 				}
 
-				if building.ident == "trasher" {
+				if building.ident == "collector" {
 
 					// find input tile
 
@@ -678,6 +679,34 @@ main :: proc() {
 
 
 							world_building.user_timer = -world_building.user_timer
+							// we will use the user_timer variable as a way to store the alternate state even if its not a timer
+
+						}
+						else if (!found_other_item_in_output1) && (found_other_item_in_output2) {
+
+							new_world_item := World_Item {
+								tile_pos = miner_output_tile_pos1,
+								item_id  = 0,
+							}
+							append(&world_items, new_world_item)
+							ordered_remove(&world_building.storage, random_item_idx)
+
+
+
+							// we will use the user_timer variable as a way to store the alternate state even if its not a timer
+
+						}
+						else if (found_other_item_in_output1) && (!found_other_item_in_output2) {
+
+							new_world_item := World_Item {
+								tile_pos = miner_output_tile_pos2,
+								item_id  = 0,
+							}
+							append(&world_items, new_world_item)
+							ordered_remove(&world_building.storage, random_item_idx)
+
+
+
 							// we will use the user_timer variable as a way to store the alternate state even if its not a timer
 
 						}

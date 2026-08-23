@@ -109,8 +109,9 @@ load_items :: proc(item_registry: ^[dynamic]Registered_Item) -> bool {
 						new_item.name = file_name_no_ext
 						new_item.id = data.id
 						cstr := strings.clone_to_cstring(item_image_Path)
-						delete(cstr)
+						
 						new_item.texture = rl.LoadTexture(cstr)
+						delete(cstr)
 						delete(item_image_Path)
 
 						
