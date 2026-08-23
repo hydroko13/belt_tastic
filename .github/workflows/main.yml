@@ -17,6 +17,13 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install deps
+        run: |
+          sudo apt-get install update
+          sudo apt-get install -y libx11-dev
+
+        
+
       - name: Build
         run: odin build . -out:belt-tastic -o:aggressive
 
