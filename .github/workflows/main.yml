@@ -209,36 +209,39 @@ jobs:
     needs:
       - macos-amd64
       - macos-arm64
-
+  
     runs-on: macos-latest
-
+  
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+  
       - name: Download AMD64 build
         uses: actions/download-artifact@v5
         with:
           name: belt-tastic-macos-amd64
           path: amd64
-
+  
       - name: Download ARM64 build
         uses: actions/download-artifact@v5
         with:
           name: belt-tastic-macos-arm64
           path: arm64
-
+  
       - name: Create universal binary
         run: |
           lipo -create \
             amd64/belt-tastic-amd64 \
             arm64/belt-tastic-arm64 \
             -output belt-tastic
-
+  
       - name: Package
         run: |
           mkdir belt-tastic-macos-universal
           cp belt-tastic belt-tastic-macos-universal/
           cp -r res belt-tastic-macos-universal/
           zip -r belt-tastic-macos-universal.zip belt-tastic-macos-universal
-
+  
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
