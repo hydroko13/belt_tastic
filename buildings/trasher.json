@@ -1,0 +1,12 @@
+{
+  "ident": "trasher",
+  "spritesheet_width": 1,
+  "tiles": [
+    {
+      "x": 0,
+      "y": 0,
+      "sprite_index": 0,
+      "type": "input"
+    }
+  ]
+}

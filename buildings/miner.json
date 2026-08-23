@@ -1,0 +1,30 @@
+{
+  "ident": "miner",
+  "spritesheet_width": 4,
+  "tiles": [
+    {
+      "x": 0,
+      "y": 0,
+      "sprite_index": 1,
+      "type": "none"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "sprite_index": 0,
+      "type": "output"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "sprite_index": 2,
+      "type": "none"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "sprite_index": 3,
+      "type": "none"
+    }
+  ]
+}

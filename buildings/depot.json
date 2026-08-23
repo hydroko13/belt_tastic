@@ -1,0 +1,25 @@
+{
+  "ident": "depot",
+  "spritesheet_width": 3,
+  "tiles": [
+    {
+      "x": 0,
+      "y": 0,
+      "sprite_index": 0,
+      "type": "none" 
+      
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "sprite_index": 1,
+      "type": "input"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "sprite_index": 2,
+      "type": "output"
+    }
+  ]
+}
