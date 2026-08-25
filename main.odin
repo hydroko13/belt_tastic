@@ -213,11 +213,17 @@ Belt :: struct {
 	items_travelling: [dynamic]Travelling_Item,
 }
 
+StorageItem :: struct {
+	item_id: int,
+	float_data_1: f32
+}
+
+
 Placed_Building :: struct {
 	building_idx: int,
 	x:            int,
 	y:            int,
-	storage:      [dynamic]int, // dyn list of item ids
+	storage:      [dynamic]StorageItem, // dyn list of item ids
 	user_timer:   f32,
 	recipe_id:    int,
 }
@@ -522,7 +528,7 @@ main :: proc() {
 							for i := len(world_items) - 1; i >= 0; i -= 1 {
 								world_item := world_items[i]
 								if world_item.tile_pos == depot_input_tile_pos {
-									append(&world_building.storage, world_item.item_id)
+									append(&world_building.storage, StorageItem{item_id = world_item.item_id})
 									ordered_remove(&world_items, i)
 								}
 							}
@@ -559,7 +565,7 @@ main :: proc() {
 						if !found_other_item_in_output {
 							new_world_item := World_Item {
 								tile_pos = depot_output_tile_pos,
-								item_id  = world_building.storage[random_item_idx],
+								item_id  = world_building.storage[random_item_idx].item_id,
 							}
 							append(&world_items, new_world_item)
 							ordered_remove(&world_building.storage, random_item_idx)
@@ -600,7 +606,7 @@ main :: proc() {
 								world_item := world_items[i]
 								if world_item.tile_pos == smelter_input_tile_pos {
 									if world_item.item_id == smelter_recipe_input {
-										append(&world_building.storage, world_item.item_id)
+										append(&world_building.storage, StorageItem{item_id = world_item.item_id, float_data_1 = 0.0})
 										ordered_remove(&world_items, i)
 									}
 								}
@@ -610,19 +616,31 @@ main :: proc() {
 
 
 					for storage_idx := len(world_building.storage) - 1; storage_idx >= 0; storage_idx -= 1 {
-						if world_building.storage[storage_idx] == smelter_recipe_input {
-							unordered_remove(&world_building.storage, storage_idx)
-							append(&world_building.storage, smelter_recipe_output) 
+						if world_building.storage[storage_idx].item_id == smelter_recipe_input {
+							world_building.storage[storage_idx].float_data_1 += f32(tick_delta)
+								
+						}
+					}
+
+					for storage_idx := len(world_building.storage) - 1; storage_idx >= 0; storage_idx -= 1 {
+						if world_building.storage[storage_idx].item_id == smelter_recipe_input {
+							if world_building.storage[storage_idx].float_data_1 >= 1.0 {
+								unordered_remove(&world_building.storage, storage_idx)
+								append(&world_building.storage, StorageItem{item_id = smelter_recipe_output}) 
+							}
+
 							
 						}
 					}
+
+					// smelter middle mark
 
 					// now output tile
 					if len(world_building.storage) > 0 {
 
 						item_idx := -1
 						for storage_item, idx in world_building.storage {
-							if storage_item == smelter_recipe_output {
+							if storage_item.item_id == smelter_recipe_output {
 								item_idx = idx
 								break
 							}
@@ -655,7 +673,7 @@ main :: proc() {
 							if !found_other_item_in_output {
 								new_world_item := World_Item {
 									tile_pos = depot_output_tile_pos,
-									item_id  = world_building.storage[item_idx],
+									item_id  = world_building.storage[item_idx].item_id,
 								}
 								append(&world_items, new_world_item)
 								ordered_remove(&world_building.storage, item_idx)
@@ -750,7 +768,7 @@ main :: proc() {
 
 										loot_item_id := miner_tile_id_to_item_id(ground_tile_under)
 										if loot_item_id != -1 {
-											append(&world_building.storage, loot_item_id)
+											append(&world_building.storage, StorageItem{item_id = loot_item_id})
 										}
 
 
@@ -796,7 +814,7 @@ main :: proc() {
 						if !found_other_item_in_output {
 							new_world_item := World_Item {
 								tile_pos = miner_output_tile_pos,
-								item_id  = world_building.storage[random_item_idx],
+								item_id  = world_building.storage[random_item_idx].item_id,
 							}
 							append(&world_items, new_world_item)
 							ordered_remove(&world_building.storage, random_item_idx)
@@ -831,7 +849,7 @@ main :: proc() {
 							for i := len(world_items) - 1; i >= 0; i -= 1 {
 								world_item := world_items[i]
 								if world_item.tile_pos == splitter_input_tile_pos {
-									append(&world_building.storage, world_item.item_id)
+									append(&world_building.storage, StorageItem{item_id = world_item.item_id})
 									ordered_remove(&world_items, i)
 								}
 							}
@@ -891,14 +909,14 @@ main :: proc() {
 							if world_building.user_timer > 0.0 {
 								new_world_item := World_Item {
 									tile_pos = miner_output_tile_pos1,
-									item_id  = world_building.storage[random_item_idx],
+									item_id  = world_building.storage[random_item_idx].item_id,
 								}
 								append(&world_items, new_world_item)
 								ordered_remove(&world_building.storage, random_item_idx)
 							} else if world_building.user_timer < 0.0 {
 								new_world_item := World_Item {
 									tile_pos = miner_output_tile_pos2,
-									item_id  = world_building.storage[random_item_idx],
+									item_id  = world_building.storage[random_item_idx].item_id,
 								}
 								append(&world_items, new_world_item)
 								ordered_remove(&world_building.storage, random_item_idx)
@@ -912,7 +930,7 @@ main :: proc() {
 
 							new_world_item := World_Item {
 								tile_pos = miner_output_tile_pos1,
-								item_id  = world_building.storage[random_item_idx],
+								item_id  = world_building.storage[random_item_idx].item_id,
 							}
 							append(&world_items, new_world_item)
 							ordered_remove(&world_building.storage, random_item_idx)
@@ -924,7 +942,7 @@ main :: proc() {
 
 							new_world_item := World_Item {
 								tile_pos = miner_output_tile_pos2,
-								item_id  = world_building.storage[random_item_idx],
+								item_id  = world_building.storage[random_item_idx].item_id,
 							}
 							append(&world_items, new_world_item)
 							ordered_remove(&world_building.storage, random_item_idx)
@@ -1330,7 +1348,7 @@ main :: proc() {
 
 				}
 				if rl.IsMouseButtonPressed(.LEFT) {
-					storage := make([dynamic]int)
+					storage := make([dynamic]StorageItem)
 					append(
 						&placed_buildings,
 						Placed_Building {
