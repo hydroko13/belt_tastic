@@ -1235,24 +1235,56 @@ main :: proc() {
 		}
 		if chunk_exists(&world_chunks, Chunk_Pos{x = chunk_x, y = chunk_y}) {
 			if is_edge_chunk(&world_chunks, Chunk_Pos{x = chunk_x, y = chunk_y}) {
-				rl.DrawRectangleLines(
-					i32(chunk_x) * (16 * 16),
-					i32(chunk_y) * (16 * 16),
-					16 * 16,
-					16 * 16,
-					rl.SKYBLUE,
-				)
-				rl.DrawTextEx(
-					ui_font,
-					"Not unlocked\nPress G to set as goal",
-					{f32(chunk_x) * (16 * 16), f32(chunk_y) * (16 * 16)},
-					25,
-					1.0,
-					rl.WHITE,
-				)
-				if rl.IsKeyPressed(rl.KeyboardKey.G) {
-					set_goal_to_chunk(&current_goal, chunk_x, chunk_y)
+
+				is_unlocking := false
+				if !current_goal.is_none {
+					if current_goal.goal_type == .Chunk {
+						if current_goal.data.reward_chunk_x == chunk_x &&
+						   current_goal.data.reward_chunk_y == chunk_y {
+							is_unlocking = true
+						}
+					}
 				}
+
+				if !is_unlocking {
+
+
+					rl.DrawRectangleLines(
+						i32(chunk_x) * (16 * 16),
+						i32(chunk_y) * (16 * 16),
+						16 * 16,
+						16 * 16,
+						rl.SKYBLUE,
+					)
+					rl.DrawTextEx(
+						ui_font,
+						"Not unlocked\nPress G to set as goal",
+						{f32(chunk_x) * (16 * 16), f32(chunk_y) * (16 * 16)},
+						25,
+						1.0,
+						rl.WHITE,
+					)
+					if rl.IsKeyPressed(rl.KeyboardKey.G) {
+						set_goal_to_chunk(&current_goal, chunk_x, chunk_y)
+					}
+				} else {
+					rl.DrawRectangleLines(
+						i32(chunk_x) * (16 * 16),
+						i32(chunk_y) * (16 * 16),
+						16 * 16,
+						16 * 16,
+						rl.GOLD,
+					)
+					rl.DrawTextEx(
+						ui_font,
+						"Unlocking...",
+						{f32(chunk_x) * (16 * 16), f32(chunk_y) * (16 * 16)},
+						25,
+						1.0,
+						rl.WHITE,
+					)
+				}
+
 			}
 		}
 
