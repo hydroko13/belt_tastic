@@ -4,6 +4,7 @@ import rl "vendor:raylib"
 import "core:os"
 import "core:strings"
 import "core:encoding/json"
+import "core:fmt"
 
 
 Registered_Item :: struct {
@@ -138,4 +139,60 @@ load_items :: proc(item_registry: ^[dynamic]Registered_Item) -> bool {
 
 	return true
 
+}
+
+ItemGroup :: struct {
+	amount: int,
+	item_id: int
+}
+
+ItemCollection :: struct {
+	item_groups: [dynamic]ItemGroup
+}
+
+create_empty_item_collection :: proc() -> ItemCollection {
+	return ItemCollection{
+		item_groups = make([dynamic]ItemGroup)
+	}
+}
+
+item_collection_add :: proc(item_collection: ^ItemCollection, item_id: int, amount: int) {
+	if amount == 0 {
+		return
+	}
+	for &item_group in item_collection.item_groups {
+		if item_group.item_id == item_id {
+			item_group.amount += amount
+			return
+		}
+	}
+
+	// if we cant find an existing item group than make a new one
+	
+	append(&item_collection.item_groups, ItemGroup{amount = amount, item_id = item_id})
+}
+
+item_collection_remove :: proc(item_collection: ^ItemCollection, item_id: int, amount_to_remove: int) {
+	if amount_to_remove == 0 {
+		return
+	}
+	for &item_group in item_collection.item_groups {
+		if item_group.item_id == item_id {
+			item_group.amount -= amount_to_remove
+
+			break
+		}
+	}
+
+	for idx := len(item_collection.item_groups) - 1; idx >= 0; idx -= 1 {
+		if item_collection.item_groups[idx].amount <= 0 {
+			unordered_remove(&item_collection.item_groups, idx)
+		}
+	}
+
+	
+}
+
+delete_item_collection :: proc(item_collection: ^ItemCollection) {
+	delete(item_collection.item_groups)
 }

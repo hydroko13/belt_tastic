@@ -388,7 +388,17 @@ main :: proc() {
 
 	gen_chunks_at(&world_chunks, Chunk_Pos{x = 0, y = 0})
 
-	
+
+	selected_goal: Goal = LandGoal{chunk_x = -1, chunk_y = 0}
+	goal_items_collected := create_empty_item_collection()
+	defer delete_item_collection(&goal_items_collected)
+
+	item_collection_add(&goal_items_collected, 0, 150)
+	item_collection_add(&goal_items_collected, 1, 5)
+	item_collection_remove(&goal_items_collected, 0, 50)
+	item_collection_remove(&goal_items_collected, 1, 5)
+
+	fmt.println(goal_items_collected)
 
 
 	for !rl.WindowShouldClose() {
@@ -1154,6 +1164,21 @@ main :: proc() {
 		}
 
 		rl.EndMode2D()
+
+		switch goal in selected_goal {
+		case NoGoal:
+			rl.DrawText("No Goal Selected", 100, 100, 40, rl.WHITE)
+			
+		case LandGoal:
+			text := fmt.tprintf("Current Goal:\nUnlock chunk %d, %d", goal.chunk_x, goal.chunk_y)
+			cstring_text := strings.clone_to_cstring(text)
+			rl.DrawText(cstring_text, 100, 100, 30, rl.WHITE)
+			delete(cstring_text)
+			free_all(context.temp_allocator)
+		}
+
+		
+		
 		rl.EndDrawing()
 
 		if rl.IsKeyPressed(rl.KeyboardKey.F4) {
