@@ -1,0 +1,25 @@
+{
+  "ident": "smelter",
+  "spritesheet_width": 3,
+  "tiles": [
+    {
+      "x": 0,
+      "y": 0,
+      "sprite_index": 1,
+      "type": "none" 
+      
+    },
+    {
+      "x": 0,
+      "y": -1,
+      "sprite_index": 0,
+      "type": "input"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "sprite_index": 2,
+      "type": "output"
+    }
+  ]
+}

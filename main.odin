@@ -1,6 +1,5 @@
 package main
 
-import "vendor:sdl2"
 import "core:encoding/json"
 import "core:fmt"
 import "core:math"
@@ -9,6 +8,7 @@ import "core:math/rand"
 import "core:os"
 import "core:strings"
 import rl "vendor:raylib"
+import "vendor:sdl2"
 
 TPS :: 20
 
@@ -219,6 +219,7 @@ Placed_Building :: struct {
 	y:            int,
 	storage:      [dynamic]int, // dyn list of item ids
 	user_timer:   f32,
+	recipe_id:    int,
 }
 
 World_Item :: struct {
@@ -236,8 +237,8 @@ Chunk_Pos :: struct {
 }
 
 Gen_Seeds :: struct {
-	ore_seed: i64,
-	land_seed: i64
+	ore_seed:  i64,
+	land_seed: i64,
 }
 
 gen_chunk :: proc(world_chunks: ^map[Chunk_Pos]World_Chunk, pos: Chunk_Pos, seeds: Gen_Seeds) {
@@ -278,11 +279,9 @@ gen_chunk :: proc(world_chunks: ^map[Chunk_Pos]World_Chunk, pos: Chunk_Pos, seed
 				} else {
 					if ore_val2 > 13 {
 						chunk.tile_data[x * 16 + y] = 2
-					}
-					else if ore_val > 12.0 {
+					} else if ore_val > 12.0 {
 						chunk.tile_data[x * 16 + y] = 3
-					}
-					else {
+					} else {
 						chunk.tile_data[x * 16 + y] = 0
 					}
 				}
@@ -423,20 +422,20 @@ main :: proc() {
 
 	tile_x_last, tile_y_last := 0, 0
 
-	gen_seeds := Gen_Seeds{ore_seed = transmute(i64)rand.uint64(), land_seed = transmute(i64)rand.uint64()}
+	gen_seeds := Gen_Seeds {
+		ore_seed  = transmute(i64)rand.uint64(),
+		land_seed = transmute(i64)rand.uint64(),
+	}
 
 	world_chunks := make(map[Chunk_Pos]World_Chunk)
 	defer delete(world_chunks)
 
 
-	
-
-	for x in -3..=3 {
-		for y in -3..=3 {
+	for x in -3 ..= 3 {
+		for y in -3 ..= 3 {
 			gen_chunks_at(&world_chunks, Chunk_Pos{x = x, y = y}, gen_seeds)
 		}
 	}
-	
 
 
 	current_goal: Goal = empty_goal()
@@ -482,7 +481,7 @@ main :: proc() {
 							x = current_goal.data.reward_chunk_x,
 							y = current_goal.data.reward_chunk_y,
 						},
-						gen_seeds
+						gen_seeds,
 					)
 				}
 
@@ -572,6 +571,102 @@ main :: proc() {
 
 				}
 
+				if building.ident == "smelter" {
+
+					// find input tile
+
+					smelter_input_tile_pos := [2]int{0, 0}
+					smelter_recipe_input, smelter_recipe_output := smelter_recipe_input_output(
+						world_building.recipe_id,
+					)
+
+					found_input := false
+					for tile in building.tiles {
+						if tile.type == "input" {
+							if !found_input {
+								smelter_input_tile_pos.x = world_building.x + tile.x
+								smelter_input_tile_pos.y = world_building.y + tile.y
+								found_input = true
+							}
+						}
+					}
+
+
+					// check world items that can be sucked into the input tile
+					// SUCK IT IN
+					if len(world_items) > 0 {
+						if len(world_building.storage) < 64 {
+							for i := len(world_items) - 1; i >= 0; i -= 1 {
+								world_item := world_items[i]
+								if world_item.tile_pos == smelter_input_tile_pos {
+									if world_item.item_id == smelter_recipe_input {
+										append(&world_building.storage, world_item.item_id)
+										ordered_remove(&world_items, i)
+									}
+								}
+							}
+						}
+					}
+
+
+					for storage_idx := len(world_building.storage) - 1; storage_idx >= 0; storage_idx -= 1 {
+						if world_building.storage[storage_idx] == smelter_recipe_input {
+							unordered_remove(&world_building.storage, storage_idx)
+							append(&world_building.storage, smelter_recipe_output) 
+							
+						}
+					}
+
+					// now output tile
+					if len(world_building.storage) > 0 {
+
+						item_idx := -1
+						for storage_item, idx in world_building.storage {
+							if storage_item == smelter_recipe_output {
+								item_idx = idx
+								break
+							}
+						}
+						if item_idx != -1 {
+							random_item_idx := rand.int_range(0, len(world_building.storage))
+							item := world_building.storage[random_item_idx]
+
+							depot_output_tile_pos := [2]int{0, 0}
+
+							found_output := false
+							for tile in building.tiles {
+								if tile.type == "output" {
+									if !found_output {
+										depot_output_tile_pos.x = world_building.x + tile.x
+										depot_output_tile_pos.y = world_building.y + tile.y
+										found_output = true
+									}
+								}
+							}
+
+							found_other_item_in_output := false
+
+							for other_item in world_items {
+								if other_item.tile_pos == depot_output_tile_pos {
+									found_other_item_in_output = true
+								}
+							}
+
+							if !found_other_item_in_output {
+								new_world_item := World_Item {
+									tile_pos = depot_output_tile_pos,
+									item_id  = world_building.storage[item_idx],
+								}
+								append(&world_items, new_world_item)
+								ordered_remove(&world_building.storage, item_idx)
+							}
+						}
+
+					}
+
+
+				}
+
 				if building.ident == "collector" {
 
 					// find input tile
@@ -631,8 +726,6 @@ main :: proc() {
 				if building.ident == "miner" {
 
 
-					
-					
 					world_building.user_timer += f32(tick_delta)
 					if world_building.user_timer > 0.5 {
 
@@ -641,25 +734,31 @@ main :: proc() {
 
 							for tile in building.tiles {
 								if tile.type == "extractor" {
-									tile_chunk_pos := Chunk_Pos{x = int(math.floor(f32(world_building.x + tile.x) / 16)), y = int(math.floor(f32(world_building.y + tile.y) / 16))}
-									inchunk_tile_x := world_building.x + tile.x - (tile_chunk_pos.x * 16)
-									inchunk_tile_y := world_building.y + tile.y - (tile_chunk_pos.y * 16)
-									
+									tile_chunk_pos := Chunk_Pos {
+										x = int(math.floor(f32(world_building.x + tile.x) / 16)),
+										y = int(math.floor(f32(world_building.y + tile.y) / 16)),
+									}
+									inchunk_tile_x :=
+										world_building.x + tile.x - (tile_chunk_pos.x * 16)
+									inchunk_tile_y :=
+										world_building.y + tile.y - (tile_chunk_pos.y * 16)
+
 									if chunk_exists(&world_chunks, tile_chunk_pos) {
 										chunk := world_chunks[tile_chunk_pos]
-										ground_tile_under := chunk.tile_data[16 * inchunk_tile_x + inchunk_tile_y]
+										ground_tile_under :=
+											chunk.tile_data[16 * inchunk_tile_x + inchunk_tile_y]
 
-										loot_item_id := miner_tile_id_to_item_id(ground_tile_under) 
+										loot_item_id := miner_tile_id_to_item_id(ground_tile_under)
 										if loot_item_id != -1 {
 											append(&world_building.storage, loot_item_id)
 										}
-										
-										
+
+
 									}
 								}
 							}
-							
-							
+
+
 						}
 
 
@@ -1015,8 +1114,7 @@ main :: proc() {
 										16,
 										rl.Fade(rl.DARKBLUE, 0.2),
 									)
-								}
-								else if tile == 2 { // iron ore
+								} else if tile == 2 { 	// iron ore
 									rl.DrawRectangle(
 										i32(chunk_pos.x * (16 * 16)) + i32(x * 16),
 										i32(chunk_pos.y * (16 * 16)) + i32(y * 16),
@@ -1024,8 +1122,7 @@ main :: proc() {
 										16,
 										rl.Fade(rl.Color{199, 173, 173, 255}, 0.2),
 									)
-								}
-								else if tile == 3 { // coal ore
+								} else if tile == 3 { 	// coal ore
 									rl.DrawRectangle(
 										i32(chunk_pos.x * (16 * 16)) + i32(x * 16),
 										i32(chunk_pos.y * (16 * 16)) + i32(y * 16),
@@ -1057,27 +1154,25 @@ main :: proc() {
 										16,
 										rl.DARKBLUE,
 									)
-								}
-								else if tile == 2 { // iron ore
+								} else if tile == 2 { 	// iron ore
 									rl.DrawRectangle(
 										i32(chunk_pos.x * (16 * 16)) + i32(x * 16),
 										i32(chunk_pos.y * (16 * 16)) + i32(y * 16),
 										16,
 										16,
-										rl.Color{199, 173, 173, 255}
+										rl.Color{199, 173, 173, 255},
 									)
-								}
-								else if tile == 3 { // coal ore
+								} else if tile == 3 { 	// coal ore
 									rl.DrawRectangle(
 										i32(chunk_pos.x * (16 * 16)) + i32(x * 16),
 										i32(chunk_pos.y * (16 * 16)) + i32(y * 16),
 										16,
 										16,
-										rl.Color{60, 60, 60, 255}
+										rl.Color{60, 60, 60, 255},
 									)
 								}
 
-								
+
 							}
 						}
 						for x in 0 ..< 16 {
