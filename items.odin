@@ -172,6 +172,29 @@ item_collection_add :: proc(item_collection: ^ItemCollection, item_id: int, amou
 	append(&item_collection.item_groups, ItemGroup{amount = amount, item_id = item_id})
 }
 
+item_collection_count :: proc(item_collection: ^ItemCollection, item_id: int) -> int {
+	amount := 0
+	for &item_group in item_collection.item_groups {
+		if item_group.item_id == item_id {
+			amount += item_group.amount
+		}
+	}
+	return amount
+}
+
+item_collection_total_count :: proc(item_collection: ^ItemCollection) -> int {
+	amount := 0
+	for &item_group in item_collection.item_groups {
+		amount += item_group.amount
+	}
+	return amount
+}
+
+item_collection_clear :: proc(item_collection: ^ItemCollection) {
+	clear(&item_collection.item_groups)
+}
+
+
 item_collection_remove :: proc(item_collection: ^ItemCollection, item_id: int, amount_to_remove: int) {
 	if amount_to_remove == 0 {
 		return

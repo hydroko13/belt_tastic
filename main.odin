@@ -389,18 +389,13 @@ main :: proc() {
 	gen_chunks_at(&world_chunks, Chunk_Pos{x = 0, y = 0})
 
 
-	selected_goal: Goal = LandGoal{chunk_x = -1, chunk_y = 0}
-	goal_items_collected := create_empty_item_collection()
-	defer delete_item_collection(&goal_items_collected)
+	current_goal: Goal = empty_goal()
+	
+	defer delete_goal(&current_goal)
 
-	item_collection_add(&goal_items_collected, 0, 150)
-	item_collection_add(&goal_items_collected, 1, 5)
-	item_collection_remove(&goal_items_collected, 0, 50)
-	item_collection_remove(&goal_items_collected, 1, 5)
+	set_goal_to_chunk(&current_goal, -1, 0)
 
-	fmt.println(goal_items_collected)
-
-
+	
 	for !rl.WindowShouldClose() {
 
 		camera.offset = {f32(rl.GetScreenWidth()) / 2, f32(rl.GetScreenHeight()) / 2}
@@ -1165,17 +1160,48 @@ main :: proc() {
 
 		rl.EndMode2D()
 
-		switch goal in selected_goal {
-		case NoGoal:
+		if current_goal.is_none {
 			rl.DrawText("No Goal Selected", 100, 100, 40, rl.WHITE)
-			
-		case LandGoal:
-			text := fmt.tprintf("Current Goal:\nUnlock chunk %d, %d", goal.chunk_x, goal.chunk_y)
+		}
+		else if current_goal.goal_type == .Chunk {
+			text := fmt.tprintf("Current Goal:\nUnlock chunk %d, %d", current_goal.data.reward_chunk_x, current_goal.data.reward_chunk_y)
 			cstring_text := strings.clone_to_cstring(text)
 			rl.DrawText(cstring_text, 100, 100, 30, rl.WHITE)
 			delete(cstring_text)
-			free_all(context.temp_allocator)
+			
+
+			
+			for item_group, item_group_idx in current_goal.required_items.item_groups {
+				reg_item_ptr: ^Registered_Item
+				for &item in item_registry {
+					if item.id == item_group.item_id {
+						reg_item_ptr = &item
+						break
+					}
+				}
+
+				count_text := fmt.tprintf("%d", item_group.amount)
+				cstring_count_text := strings.clone_to_cstring(count_text)
+
+				
+				rl.DrawTextureEx(reg_item_ptr.texture, {f32(80 + item_group_idx * 120), 180}, 0, 5.0, rl.WHITE)
+				rl.DrawText(cstring_count_text, i32((80 + item_group_idx * 120) + 70), 250, 19, rl.WHITE)
+
+				delete(cstring_count_text)
+				
+			}
+
+			
+
+			
 		}
+		else if current_goal.goal_type == .Unlock {
+			rl.DrawText("Current Goal:\nUnlock ___", 100, 100, 30, rl.WHITE)
+		}
+
+		
+			
+	
 
 		
 		
@@ -1185,7 +1211,8 @@ main :: proc() {
 			rl.ToggleFullscreen()
 		}
 
-
+		free_all(context.temp_allocator)
+		
 	}
 
 }
