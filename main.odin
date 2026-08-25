@@ -301,6 +301,9 @@ main :: proc() {
 	rl.InitWindow(1200, 800, "Belt-tastic")
 	defer rl.CloseWindow()
 
+	ui_font := rl.LoadFont("res/ibmplex.ttf")
+	defer rl.UnloadFont(ui_font)
+
 
 	rl.InitAudioDevice()
 
@@ -1161,12 +1164,12 @@ main :: proc() {
 		rl.EndMode2D()
 
 		if current_goal.is_none {
-			rl.DrawText("No Goal Selected", 100, 100, 40, rl.WHITE)
+			rl.DrawTextEx(ui_font, "No Goal Selected", {100, 100}, 40, 1.0, rl.WHITE)
 		}
 		else if current_goal.goal_type == .Chunk {
 			text := fmt.tprintf("Current Goal:\nUnlock chunk %d, %d", current_goal.data.reward_chunk_x, current_goal.data.reward_chunk_y)
 			cstring_text := strings.clone_to_cstring(text)
-			rl.DrawText(cstring_text, 100, 100, 30, rl.WHITE)
+			rl.DrawTextEx(ui_font, cstring_text, {100, 100}, 40, 1.0, rl.WHITE)
 			delete(cstring_text)
 			
 
@@ -1180,12 +1183,12 @@ main :: proc() {
 					}
 				}
 
-				count_text := fmt.tprintf("%d", item_group.amount)
+				count_text := fmt.tprintf("0 / %d", item_group.amount)
 				cstring_count_text := strings.clone_to_cstring(count_text)
 
 				
-				rl.DrawTextureEx(reg_item_ptr.texture, {f32(80 + item_group_idx * 120), 180}, 0, 5.0, rl.WHITE)
-				rl.DrawText(cstring_count_text, i32((80 + item_group_idx * 120) + 70), 250, 19, rl.WHITE)
+				rl.DrawTextureEx(reg_item_ptr.texture, {f32(80 + item_group_idx * 120), 200}, 0, 5.0, rl.WHITE)
+				rl.DrawTextEx(ui_font, cstring_count_text, {f32((80 + item_group_idx * 120) + 40 - int(rl.MeasureTextEx(ui_font, cstring_count_text, 21, 1.0).x / 2)), 280}, 21, 1.0, rl.WHITE)
 
 				delete(cstring_count_text)
 				
@@ -1196,7 +1199,7 @@ main :: proc() {
 			
 		}
 		else if current_goal.goal_type == .Unlock {
-			rl.DrawText("Current Goal:\nUnlock ___", 100, 100, 30, rl.WHITE)
+			rl.DrawTextEx(ui_font, "Current Goal:\nUnlock ___", 100, 100, 30, rl.WHITE)
 		}
 
 		
