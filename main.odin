@@ -125,7 +125,7 @@ load :: proc(building_registry: ^[dynamic]Registered_Building) -> bool {
 						new_building.ident = data.ident
 						new_building.spritesheet_width = data.spritesheet_width
 						cstr := strings.clone_to_cstring(building_image_Path)
-						
+
 						new_building.spritesheet_texture = rl.LoadTexture(cstr)
 						delete(cstr)
 						delete(building_image_Path)
@@ -293,6 +293,16 @@ is_edge_chunk :: proc(world_chunks: ^map[Chunk_Pos]World_Chunk, pos: Chunk_Pos) 
 	}
 }
 
+
+chunk_exists :: proc(world_chunks: ^map[Chunk_Pos]World_Chunk, pos: Chunk_Pos) -> bool {
+	_, exists := world_chunks[pos]
+	if exists {
+		return true
+	} else {
+		return false
+	}
+}
+
 main :: proc() {
 
 
@@ -331,7 +341,7 @@ main :: proc() {
 		delete(building_registry)
 	}
 
-	
+
 	item_registry := make([dynamic]Registered_Item)
 	defer {
 		for item in item_registry {
@@ -393,12 +403,13 @@ main :: proc() {
 
 
 	current_goal: Goal = empty_goal()
-	
+
 	defer delete_goal(&current_goal)
 
-	set_goal_to_chunk(&current_goal, -1, 0)
 
-	
+	goal_items_obtained := create_empty_item_collection()
+	defer delete_item_collection(&goal_items_obtained)
+
 	for !rl.WindowShouldClose() {
 
 		camera.offset = {f32(rl.GetScreenWidth()) / 2, f32(rl.GetScreenHeight()) / 2}
@@ -416,6 +427,31 @@ main :: proc() {
 		if tick_timer > tick_delta / speed_multiply {
 			//on_tick(f32(tick_delta), &camera)
 
+
+			// check if goal is unlocked
+			has_everything := true
+			for item_group in current_goal.required_items.item_groups {
+				amount_obtained := item_collection_count(&goal_items_obtained, item_group.item_id)
+				if amount_obtained != item_group.amount {
+					has_everything = false
+				}
+			}
+
+			if has_everything {
+				if current_goal.goal_type == .Chunk {
+					gen_chunks_at(
+						&world_chunks,
+						Chunk_Pos {
+							x = current_goal.data.reward_chunk_x,
+							y = current_goal.data.reward_chunk_y,
+						},
+					)
+				}
+
+				current_goal = empty_goal()
+				item_collection_clear(&goal_items_obtained)
+
+			}
 
 			producers_tiles := make([dynamic][2]int)
 			defer delete(producers_tiles)
@@ -518,17 +554,39 @@ main :: proc() {
 
 					// check world items that can be sucked into the input tile
 					// SUCK IT IN
-					if len(world_items) > 0 {
-						if len(world_building.storage) < 64 {
-							for i := len(world_items) - 1; i >= 0; i -= 1 {
-								world_item := world_items[i]
-								if world_item.tile_pos == depot_input_tile_pos {
-									ordered_remove(&world_items, i)
+					if !current_goal.is_none {
+						if len(world_items) > 0 {
+							if len(world_building.storage) < 64 {
+								for i := len(world_items) - 1; i >= 0; i -= 1 {
+									world_item := world_items[i]
+									if world_item.tile_pos == depot_input_tile_pos {
+
+										amount_required := item_collection_count(
+											&current_goal.required_items,
+											world_item.item_id,
+										)
+										amount_obtained := item_collection_count(
+											&goal_items_obtained,
+											world_item.item_id,
+										)
+										if amount_required > 0 {
+											if amount_obtained < amount_required {
+
+												item_collection_add(
+													&goal_items_obtained,
+													world_item.item_id,
+													1,
+												)
+												ordered_remove(&world_items, i)
+											}
+
+
+										}
+									}
 								}
 							}
 						}
 					}
-
 
 				}
 
@@ -689,8 +747,7 @@ main :: proc() {
 							world_building.user_timer = -world_building.user_timer
 							// we will use the user_timer variable as a way to store the alternate state even if its not a timer
 
-						}
-						else if (!found_other_item_in_output1) && (found_other_item_in_output2) {
+						} else if (!found_other_item_in_output1) && (found_other_item_in_output2) {
 
 							new_world_item := World_Item {
 								tile_pos = miner_output_tile_pos1,
@@ -700,11 +757,9 @@ main :: proc() {
 							ordered_remove(&world_building.storage, random_item_idx)
 
 
-
 							// we will use the user_timer variable as a way to store the alternate state even if its not a timer
 
-						}
-						else if (found_other_item_in_output1) && (!found_other_item_in_output2) {
+						} else if (found_other_item_in_output1) && (!found_other_item_in_output2) {
 
 							new_world_item := World_Item {
 								tile_pos = miner_output_tile_pos2,
@@ -712,7 +767,6 @@ main :: proc() {
 							}
 							append(&world_items, new_world_item)
 							ordered_remove(&world_building.storage, random_item_idx)
-
 
 
 							// we will use the user_timer variable as a way to store the alternate state even if its not a timer
@@ -839,6 +893,7 @@ main :: proc() {
 			rl.PlaySound(blipSound2)
 		}
 
+
 		if rl.IsKeyPressed(.Q) {
 			if place_mode == .Building {
 				building_being_placed_idx += 1
@@ -896,7 +951,7 @@ main :: proc() {
 										i32(chunk_pos.y * (16 * 16)) + i32(y * 16),
 										16,
 										16,
-										rl.Fade(rl.DARKBLUE, 0.2)
+										rl.Fade(rl.DARKBLUE, 0.2),
 									)
 								}
 
@@ -1018,16 +1073,13 @@ main :: proc() {
 				dx := point_b.x - point_a.x
 				dy := point_b.y - point_a.y
 
-				cx, cy := i32(point_a.x + (dx * item.travel_progress)), i32(point_a.y + (dy * item.travel_progress))
-				
+				cx, cy :=
+					i32(point_a.x + (dx * item.travel_progress)),
+					i32(point_a.y + (dy * item.travel_progress))
+
 				for registered_item in item_registry {
 					if registered_item.id == item.item_id {
-						rl.DrawTexture(
-							registered_item.texture,
-							cx - 8,
-							cy - 8,
-							rl.WHITE,
-						)
+						rl.DrawTexture(registered_item.texture, cx - 8, cy - 8, rl.WHITE)
 						break
 					}
 				}
@@ -1049,131 +1101,177 @@ main :: proc() {
 			changed = true
 		}
 
+		chunk_x, chunk_y := int(math.floor(tile_x / 16)), int(math.floor(tile_y / 16))
+		selected_edge_chunk := false
+		selected_real_chunk := false
 
-		if place_mode == .Building {
-			rl.DrawRectangleLines(i32(tile_x * 16), i32(tile_y * 16), 16, 16, rl.RED)
-
-			building := building_registry[building_being_placed_idx]
-
-			for tile in building.tiles {
-				rl.DrawTextureRec(
-					building.spritesheet_texture,
-					rl.Rectangle{x = f32(tile.sprite_index * 16), y = 0, width = 16, height = 16},
-					{(tile_x + f32(tile.x)) * 16.0, (tile_y + f32(tile.y)) * 16.0},
-					rl.WHITE,
-				)
-
+		if chunk_exists(&world_chunks, Chunk_Pos{x = chunk_x, y = chunk_y}) {
+			if is_edge_chunk(&world_chunks, Chunk_Pos{x = chunk_x, y = chunk_y}) {
+				selected_edge_chunk = true
 			}
-			if rl.IsMouseButtonPressed(.LEFT) {
-				storage := make([dynamic]int)
-				if building_registry[building_being_placed_idx].ident == "depot" {
-					append(&storage, 0)
+			selected_real_chunk = true
+		}
+
+
+		if (!selected_edge_chunk) && selected_real_chunk {
+
+
+			if place_mode == .Building {
+				rl.DrawRectangleLines(i32(tile_x * 16), i32(tile_y * 16), 16, 16, rl.RED)
+
+				building := building_registry[building_being_placed_idx]
+
+				for tile in building.tiles {
+					rl.DrawTextureRec(
+						building.spritesheet_texture,
+						rl.Rectangle {
+							x = f32(tile.sprite_index * 16),
+							y = 0,
+							width = 16,
+							height = 16,
+						},
+						{(tile_x + f32(tile.x)) * 16.0, (tile_y + f32(tile.y)) * 16.0},
+						rl.WHITE,
+					)
+
 				}
-
-				append(
-					&placed_buildings,
-					Placed_Building {
-						x = int(tile_x),
-						y = int(tile_y),
-						building_idx = building_being_placed_idx,
-						storage = storage,
-					},
-				)
-			}
-
-		} else if place_mode == .Belt {
-			if belt_place_mode == .PendingA {
-				rl.DrawRectangleLines(i32(tile_x * 16), i32(tile_y * 16), 16, 16, rl.DARKBLUE)
-
 				if rl.IsMouseButtonPressed(.LEFT) {
-					belt_a_pos.x = int(tile_x)
-					belt_a_pos.y = int(tile_y)
-					belt_place_mode = .PlacedA
+					storage := make([dynamic]int)
+					if building_registry[building_being_placed_idx].ident == "depot" {
+						append(&storage, 0)
+					}
+
+					append(
+						&placed_buildings,
+						Placed_Building {
+							x = int(tile_x),
+							y = int(tile_y),
+							building_idx = building_being_placed_idx,
+							storage = storage,
+						},
+					)
 				}
 
-			} else if belt_place_mode == .PlacedA {
+			} else if place_mode == .Belt {
+				if belt_place_mode == .PendingA {
+					rl.DrawRectangleLines(i32(tile_x * 16), i32(tile_y * 16), 16, 16, rl.DARKBLUE)
 
-				if changed {
-					if blip_sound_cooldown > 0.05 {
-						rl.PlaySound(blipSound)
-						blip_sound_cooldown = 0.0
+					if rl.IsMouseButtonPressed(.LEFT) {
+						belt_a_pos.x = int(tile_x)
+						belt_a_pos.y = int(tile_y)
+						belt_place_mode = .PlacedA
+					}
+
+				} else if belt_place_mode == .PlacedA {
+
+					if changed {
+						if blip_sound_cooldown > 0.05 {
+							rl.PlaySound(blipSound)
+							blip_sound_cooldown = 0.0
+						}
+
+					}
+
+					blip_sound_cooldown += delta
+
+					rl.DrawRectangleLines(
+						i32(belt_a_pos.x * 16),
+						i32(belt_a_pos.y * 16),
+						16,
+						16,
+						rl.MAGENTA,
+					)
+
+					length_to_mouse_tile := math.sqrt(
+						math.pow(f32(belt_a_pos.x * 16) + 8.0 - (tile_x * 16.0 + 8.0), 2.0) +
+						math.pow(f32(belt_a_pos.y * 16 + 8.0) - (tile_y * 16.0 + 8.0), 2.0),
+					)
+					belt_thickness: f32 = 12.0
+					belt_center: rl.Vector2
+
+					belt_center.x = (f32(belt_a_pos.x * 16.0 + 8.0) + (tile_x * 16.0 + 8.0)) / 2
+					belt_center.y = (f32(belt_a_pos.y * 16.0 + 8.0) + (tile_y * 16.0 + 8.0)) / 2
+
+					direc := math.to_degrees(
+						math.atan2(
+							f32(belt_a_pos.y * 16 + 8.0) - (tile_y * 16. + 8.0),
+							f32(belt_a_pos.x * 16 + 8.0) - (tile_x * 16.0 + 8.0),
+						),
+					)
+
+					rl.DrawRectanglePro(
+						rl.Rectangle {
+							belt_center.x,
+							belt_center.y,
+							length_to_mouse_tile,
+							belt_thickness,
+						},
+						{length_to_mouse_tile / 2.0, belt_thickness / 2.0},
+						direc,
+						rl.GRAY,
+					)
+					rl.DrawCircleLines(
+						i32(belt_a_pos.x * 16) + 8,
+						i32(belt_a_pos.y * 16) + 8,
+						7,
+						rl.YELLOW,
+					)
+
+					if rl.IsMouseButtonPressed(.LEFT) {
+						append(
+							&placed_belts,
+							Belt {
+								point_a = rl.Vector2{f32(belt_a_pos.x), f32(belt_a_pos.y)},
+								point_b = rl.Vector2{tile_x, tile_y},
+								items_travelling = make([dynamic]Travelling_Item),
+							},
+						)
+						belt_place_mode = .PendingA
 					}
 
 				}
+			}
 
-				blip_sound_cooldown += delta
-
+		}
+		if chunk_exists(&world_chunks, Chunk_Pos{x = chunk_x, y = chunk_y}) {
+			if is_edge_chunk(&world_chunks, Chunk_Pos{x = chunk_x, y = chunk_y}) {
 				rl.DrawRectangleLines(
-					i32(belt_a_pos.x * 16),
-					i32(belt_a_pos.y * 16),
-					16,
-					16,
-					rl.MAGENTA,
+					i32(chunk_x) * (16 * 16),
+					i32(chunk_y) * (16 * 16),
+					16 * 16,
+					16 * 16,
+					rl.SKYBLUE,
 				)
-
-				length_to_mouse_tile := math.sqrt(
-					math.pow(f32(belt_a_pos.x * 16) + 8.0 - (tile_x * 16.0 + 8.0), 2.0) +
-					math.pow(f32(belt_a_pos.y * 16 + 8.0) - (tile_y * 16.0 + 8.0), 2.0),
+				rl.DrawTextEx(
+					ui_font,
+					"Not unlocked\nPress G to set as goal",
+					{f32(chunk_x) * (16 * 16), f32(chunk_y) * (16 * 16)},
+					25,
+					1.0,
+					rl.WHITE,
 				)
-				belt_thickness: f32 = 12.0
-				belt_center: rl.Vector2
-
-				belt_center.x = (f32(belt_a_pos.x * 16.0 + 8.0) + (tile_x * 16.0 + 8.0)) / 2
-				belt_center.y = (f32(belt_a_pos.y * 16.0 + 8.0) + (tile_y * 16.0 + 8.0)) / 2
-
-				direc := math.to_degrees(
-					math.atan2(
-						f32(belt_a_pos.y * 16 + 8.0) - (tile_y * 16. + 8.0),
-						f32(belt_a_pos.x * 16 + 8.0) - (tile_x * 16.0 + 8.0),
-					),
-				)
-
-				rl.DrawRectanglePro(
-					rl.Rectangle {
-						belt_center.x,
-						belt_center.y,
-						length_to_mouse_tile,
-						belt_thickness,
-					},
-					{length_to_mouse_tile / 2.0, belt_thickness / 2.0},
-					direc,
-					rl.GRAY,
-				)
-				rl.DrawCircleLines(
-					i32(belt_a_pos.x * 16) + 8,
-					i32(belt_a_pos.y * 16) + 8,
-					7,
-					rl.YELLOW,
-				)
-
-				if rl.IsMouseButtonPressed(.LEFT) {
-					append(
-						&placed_belts,
-						Belt {
-							point_a = rl.Vector2{f32(belt_a_pos.x), f32(belt_a_pos.y)},
-							point_b = rl.Vector2{tile_x, tile_y},
-							items_travelling = make([dynamic]Travelling_Item),
-						},
-					)
-					belt_place_mode = .PendingA
+				if rl.IsKeyPressed(rl.KeyboardKey.G) {
+					set_goal_to_chunk(&current_goal, chunk_x, chunk_y)
 				}
-
 			}
 		}
+
 
 		rl.EndMode2D()
 
 		if current_goal.is_none {
 			rl.DrawTextEx(ui_font, "No Goal Selected", {100, 100}, 40, 1.0, rl.WHITE)
-		}
-		else if current_goal.goal_type == .Chunk {
-			text := fmt.tprintf("Current Goal:\nUnlock chunk %d, %d", current_goal.data.reward_chunk_x, current_goal.data.reward_chunk_y)
+		} else if current_goal.goal_type == .Chunk {
+			text := fmt.tprintf(
+				"Current Goal:\nUnlock chunk %d, %d",
+				current_goal.data.reward_chunk_x,
+				current_goal.data.reward_chunk_y,
+			)
 			cstring_text := strings.clone_to_cstring(text)
 			rl.DrawTextEx(ui_font, cstring_text, {100, 100}, 40, 1.0, rl.WHITE)
 			delete(cstring_text)
-			
 
-			
+
 			for item_group, item_group_idx in current_goal.required_items.item_groups {
 				reg_item_ptr: ^Registered_Item
 				for &item in item_registry {
@@ -1183,31 +1281,45 @@ main :: proc() {
 					}
 				}
 
-				count_text := fmt.tprintf("0 / %d", item_group.amount)
+				amount_collected := item_collection_count(&goal_items_obtained, item_group.item_id)
+
+				count_text := fmt.tprintf("%d / %d", amount_collected, item_group.amount)
 				cstring_count_text := strings.clone_to_cstring(count_text)
 
-				
-				rl.DrawTextureEx(reg_item_ptr.texture, {f32(80 + item_group_idx * 120), 200}, 0, 5.0, rl.WHITE)
-				rl.DrawTextEx(ui_font, cstring_count_text, {f32((80 + item_group_idx * 120) + 40 - int(rl.MeasureTextEx(ui_font, cstring_count_text, 21, 1.0).x / 2)), 280}, 21, 1.0, rl.WHITE)
+
+				rl.DrawTextureEx(
+					reg_item_ptr.texture,
+					{f32(80 + item_group_idx * 120), 200},
+					0,
+					5.0,
+					rl.WHITE,
+				)
+				rl.DrawTextEx(
+					ui_font,
+					cstring_count_text,
+					{
+						f32(
+							(80 + item_group_idx * 120) +
+							40 -
+							int(rl.MeasureTextEx(ui_font, cstring_count_text, 21, 1.0).x / 2),
+						),
+						280,
+					},
+					21,
+					1.0,
+					rl.WHITE,
+				)
 
 				delete(cstring_count_text)
-				
+
 			}
 
-			
 
-			
-		}
-		else if current_goal.goal_type == .Unlock {
+		} else if current_goal.goal_type == .Unlock {
 			rl.DrawTextEx(ui_font, "Current Goal:\nUnlock ___", 100, 100, 30, rl.WHITE)
 		}
 
-		
-			
-	
 
-		
-		
 		rl.EndDrawing()
 
 		if rl.IsKeyPressed(rl.KeyboardKey.F4) {
@@ -1215,7 +1327,7 @@ main :: proc() {
 		}
 
 		free_all(context.temp_allocator)
-		
+
 	}
 
 }

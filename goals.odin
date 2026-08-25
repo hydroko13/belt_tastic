@@ -37,7 +37,7 @@ set_goal_to_chunk :: proc(goal: ^Goal, chunk_x, chunk_y: int) {
 	goal.is_none = false
 	item_collection_clear(&goal.required_items)
 	loot_table := [?]int{
-		0, 1, 2
+		0,
 	}
 	
 	for _ in 0..<rand.int_range(2, 5) {
