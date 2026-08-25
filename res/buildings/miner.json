@@ -6,7 +6,7 @@
       "x": 0,
       "y": 0,
       "sprite_index": 1,
-      "type": "none"
+      "type": "extractor"
     },
     {
       "x": 0,
@@ -18,13 +18,13 @@
       "x": -1,
       "y": 0,
       "sprite_index": 2,
-      "type": "none"
+      "type": "extractor"
     },
     {
       "x": 1,
       "y": 0,
       "sprite_index": 3,
-      "type": "none"
+      "type": "extractor"
     }
   ]
 }
