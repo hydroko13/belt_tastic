@@ -8,7 +8,6 @@ import "core:math/rand"
 import "core:os"
 import "core:strings"
 import rl "vendor:raylib"
-import "vendor:sdl2"
 
 TPS :: 20
 
