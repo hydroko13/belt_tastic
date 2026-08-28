@@ -348,8 +348,11 @@ main :: proc() {
 
 	speed_multiply := 1.0
 	blip_sound_cooldown: f32 = 0.0
+	rl.SetConfigFlags({.WINDOW_RESIZABLE})
 	rl.InitWindow(1200, 800, "Belt-tastic")
 	defer rl.CloseWindow()
+
+	rl.MaximizeWindow()
 
 	ui_font := rl.LoadFont("res/ibmplex.ttf")
 	defer rl.UnloadFont(ui_font)
@@ -363,8 +366,8 @@ main :: proc() {
 
 	rl.PlayMusicStream(music)
 
-	rl.ToggleFullscreen()
 
+	
 	blipSound := rl.LoadSound("res/audio/blipSelect.wav")
 	defer rl.UnloadSound(blipSound)
 
@@ -1786,11 +1789,6 @@ main :: proc() {
 		}
 
 		rl.EndDrawing()
-
-
-		if rl.IsKeyPressed(rl.KeyboardKey.F4) {
-			rl.ToggleFullscreen()
-		}
 
 		free_all(context.temp_allocator)
 
