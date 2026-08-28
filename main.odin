@@ -496,7 +496,7 @@ main :: proc() {
 						&goal_items_obtained,
 						item_group.item_id,
 					)
-					if amount_obtained != item_group.amount {
+					if amount_obtained < item_group.amount {
 						has_everything = false
 					}
 				}
